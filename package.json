@@ -26,9 +26,8 @@
     "reset": "npx prisma migrate reset --preview-feature",
     "studio": "npx prisma studio",
     "docker:build": "docker build -t brok-auth-bot .",
-    "docker:start:dev" : "docker run -p 3010:3002 -e NODE_ENV=development --name brok-auth-bot brok-auth-bot",
-    "docker:remove" : "docker container rm brok-auth-bot"
-
+    "docker:start": "docker run -p 3010:3002 -e NODE_ENV=docker -e PROVIDER_URL=http://besu:8545 --name brok-auth-bot --network=brok-network brok-auth-bot",
+    "docker:remove": "docker container rm brok-auth-bot"
   },
   "dependencies": {
     "@ceramicnetwork/http-client": "^0.9.6",
@@ -39,6 +38,7 @@
     "@nestjs/platform-express": "^7.5.1",
     "@prisma/client": "^2.19.0",
     "3id-did-provider": "^0.5.1",
+    "date-fns": "^2.19.0",
     "ethers": "^5.0.24",
     "helmet": "^4.4.1",
     "passport": "^0.4.1",

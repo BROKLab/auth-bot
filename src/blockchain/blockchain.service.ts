@@ -21,7 +21,7 @@ export class BlockchainService {
         password: PROVIDER_PASSWORD,
       });
     } else {
-      console.log('Connected localhost');
+      console.log('Connected localhost', this.configService.get('PROVIDER_URL'));
       return new ethers.providers.JsonRpcProvider({
         url: this.configService.get('PROVIDER_URL'),
       });

@@ -5,6 +5,8 @@ import { decode, verify } from 'jsonwebtoken';
 import { BlockchainService } from '../blockchain/blockchain.service';
 import { AuthService } from './auth.service';
 import { BankidData } from './bankid.types';
+import { parse } from 'date-fns';
+import { nb } from 'date-fns/locale';
 
 @Controller('auth')
 export class AuthController {
@@ -50,7 +52,20 @@ export class AuthController {
         txHash = tx.hash;
         blockNumber = tx.blockNumber;
       }
-      const jws = await this.authService.issueJWS({ uuid: bankidData.socialno, accounts: [address], familyName: bankidData.name, birthDate: new Date(bankidData.dateofbirth) });
+      let birthdateISO8601 = null;
+      try {
+        birthdateISO8601 = parse(bankidData.dateofbirth, 'yyyy-MM-dd', new Date(), {
+          locale: nb,
+        }).toISOString();
+      } catch (error) {
+        console.log(error.message);
+      }
+      const jws = await this.authService.issueJWS({
+        identifier: bankidData.socialno,
+        blockchainAccounts: [address],
+        familyName: bankidData.name,
+        birthDate: birthdateISO8601,
+      });
       return jws;
     } catch (error) {
       console.log(error.message);
