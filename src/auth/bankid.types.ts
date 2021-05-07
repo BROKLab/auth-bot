@@ -19,6 +19,8 @@ export interface BankidData {
   country: string;
   issuingbank: string;
   name: string;
+  given_name: string;
+  family_name: string;
   iat: number;
   nbf: number;
   exp: number;

@@ -2,6 +2,7 @@ import ThreeIdProvider from '3id-did-provider';
 import CeramicClient from '@ceramicnetwork/http-client';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { getUnixTime } from 'date-fns';
 
 @Injectable()
 export class AuthService {
@@ -17,6 +18,7 @@ export class AuthService {
   }
 
   async issueJWS(payload: any) {
+    payload = { iat: getUnixTime(new Date()), ...payload };
     // TODO Implement 1h 5m 20sec etc for expiresIn
     const jws = await this.ceramic.did.createJWS(payload);
     return jws;

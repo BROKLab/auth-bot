@@ -52,21 +52,42 @@ export class AuthController {
         txHash = tx.hash;
         blockNumber = tx.blockNumber;
       }
+
+      // Fund account
+      const provider = this.blockchainService.provider();
+      const balance = await provider.getBalance(address);
+
+      if (balance.lt(ethers.utils.parseEther('0.1'))) {
+        console.debug('Balance below 0,1, start funding');
+        const wallet = new ethers.Wallet(this.configService.get<string>('PRIVATE_KEY')).connect(provider);
+        wallet.sendTransaction({ to: address, value: ethers.utils.parseEther('0.2') });
+      } else {
+        console.debug('Account does not need funding');
+      }
+
       let birthdateISO8601 = null;
       try {
-        birthdateISO8601 = parse(bankidData.dateofbirth, 'yyyy-MM-dd', new Date(), {
+        birthdateISO8601 = parse(bankidData.dateofbirth, 'yyyyMMdd', new Date(), {
           locale: nb,
         }).toISOString();
       } catch (error) {
         console.log(error.message);
       }
-      const jws = await this.authService.issueJWS({
-        identifier: bankidData.socialno,
-        blockchainAccounts: [address],
-        familyName: bankidData.name,
-        birthDate: birthdateISO8601,
-      });
-      return jws;
+
+      const tokens = await Promise.all([
+        this.authService.issueJWS({
+          cryptoAccounts: [address],
+          name: bankidData.name,
+          familyName: bankidData.family_name,
+          givenName: bankidData.given_name,
+          birthDate: birthdateISO8601,
+        }),
+        this.authService.issueJWS({
+          identifier: bankidData.socialno,
+          cryptoAccounts: [address],
+        }),
+      ]);
+      return tokens;
     } catch (error) {
       console.log(error.message);
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);

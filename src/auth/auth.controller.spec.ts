@@ -48,15 +48,23 @@ describe('AuthController', () => {
     const tokenHash = ethers.utils.id(token);
     const tokenHashBytes = ethers.utils.arrayify(tokenHash);
     const signature = await wallet1.signMessage(tokenHashBytes);
-    const jws = await controller.verify({
+    const tokens = await controller.verify({
       bankIdToken: token,
       signature,
-      skipBlockchain: false,
+      skipBlockchain: true,
       skipBankidVerify: true,
     });
-    const verified = await ceramic.did.verifyJWS(jws);
-    expect(verified.payload.uuid).toBe('14102123973');
-    expect(verified.payload.familyName).toBe('Lo, Morten');
+    await Promise.all(
+      tokens.map(async (token) => {
+        const verified = await ceramic.did.verifyJWS(token);
+        if (verified.payload.identifier) {
+          expect(verified.payload.identifier).toBe('14102123973');
+        }
+        if (verified.payload.name) {
+          expect(verified.payload.name).toBe('Lo, Morten');
+        }
+      }),
+    );
   });
   it('test', async () => {
     //
