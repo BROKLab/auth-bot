@@ -1,19 +1,21 @@
-import ThreeIdProvider from '3id-did-provider';
+import ThreeIdResolver from '@ceramicnetwork/3id-did-resolver';
+import KeyDidResolver from 'key-did-resolver';
 import CeramicClient from '@ceramicnetwork/http-client';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { randomBytes } from 'crypto';
 import { ethers } from 'ethers';
+import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { AuthController } from './auth.controller';
 import { AuthModuleMeta } from './auth.module';
 import { BANKID_TEST_TOKEN2 } from './test.data';
+import { DID } from 'dids';
 
 // Because we are doing a blockchain tx we need to increase the async test timeout
 jest.setTimeout(20000);
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let configService: ConfigService;
   let module: TestingModule;
   const wallet1 = ethers.Wallet.createRandom();
 
@@ -25,8 +27,8 @@ describe('AuthController', () => {
 
   beforeEach(async () => {
     module = await Test.createTestingModule(AuthModuleMeta).compile();
+    await module.init();
     controller = module.get<AuthController>(AuthController);
-    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(async () => {
@@ -40,9 +42,17 @@ describe('AuthController', () => {
   it('shuld get a DID from valid BankDI', async () => {
     const API_URL = 'https://ceramic-clay.3boxlabs.com';
     const ceramic = new CeramicClient(API_URL);
-    const threeIdProvider = await ThreeIdProvider.create({ ceramic: ceramic, getPermission: async () => ['/'], seed: new Uint8Array(randomBytes(32)) });
-    const didProvider = threeIdProvider.getDidProvider();
-    await ceramic.setDIDProvider(didProvider);
+    const seed = randomBytes(32);
+    // const privateKey = this.configService.get<string>('PRIVATE_KEY').substr(2); // substr to remove 0x
+    // const privateKeyArray = this.toUint8Array(privateKey, 'hex');
+    const provider = new Ed25519Provider(seed);
+    const resolver = {
+      ...KeyDidResolver.getResolver(),
+      ...ThreeIdResolver.getResolver(ceramic),
+    };
+    const did = new DID({ provider, resolver });
+    await ceramic.setDID(did);
+    await ceramic.did.authenticate();
 
     const token = BANKID_TEST_TOKEN2;
     const tokenHash = ethers.utils.id(token);
@@ -57,6 +67,8 @@ describe('AuthController', () => {
     await Promise.all(
       tokens.map(async (token) => {
         const verified = await ceramic.did.verifyJWS(token);
+        console.log(verified.didResolutionResult.didDocument);
+
         if (verified.payload.identifier) {
           expect(verified.payload.identifier).toBe('14102123973');
         }

@@ -1,10 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { AuthProvider__factory } from './typechain/factories//AuthProvider__factory';
+import { AuthProvider__factory } from './contracts/factories/AuthProvider__factory';
 
 @Injectable()
-export class BlockchainService {
+export class EthereumService {
   constructor(private configService: ConfigService) {}
 
   signer() {
@@ -21,13 +21,11 @@ export class BlockchainService {
         password: PROVIDER_PASSWORD,
       });
     } else {
-      console.log('Connected localhost', this.configService.get('PROVIDER_URL'));
       return new ethers.providers.JsonRpcProvider({
         url: this.configService.get('PROVIDER_URL'),
       });
     }
   }
-
   authProviderContract() {
     return new AuthProvider__factory(this.signer()).attach(this.configService.get('AUTH_PROVIDER_ADDRESS'));
   }

@@ -1,16 +1,16 @@
 import { Controller, Get, HttpException, HttpStatus, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ethers } from 'ethers';
-import { decode, verify } from 'jsonwebtoken';
-import { BlockchainService } from '../blockchain/blockchain.service';
-import { AuthService } from './auth.service';
-import { BankidData } from './bankid.types';
 import { parse } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { ethers } from 'ethers';
+import { decode, verify } from 'jsonwebtoken';
+import { CeramicService } from '../network/ceramic.service';
+import { EthereumService } from '../network/ethereum.service';
+import { BankidData } from './bankid.types';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly configService: ConfigService, private readonly blockchainService: BlockchainService, private readonly authService: AuthService) {}
+  constructor(private readonly configService: ConfigService, private readonly ethereumService: EthereumService, private readonly ceramicService: CeramicService) {}
 
   @Get('/verify/bankid')
   async verify(
@@ -46,7 +46,7 @@ export class AuthController {
       if (skipBlockchain) {
         console.debug('Skipping onChain verification because we are not in production');
       } else {
-        const authProviderContract = this.blockchainService.authProviderContract();
+        const authProviderContract = this.ethereumService.authProviderContract();
         const tx = await authProviderContract.authenticate(address);
         await tx.wait();
         txHash = tx.hash;
@@ -54,7 +54,7 @@ export class AuthController {
       }
 
       // Fund account
-      const provider = this.blockchainService.provider();
+      const provider = this.ethereumService.provider();
       const balance = await provider.getBalance(address);
 
       if (balance.lt(ethers.utils.parseEther('0.1'))) {
@@ -75,14 +75,14 @@ export class AuthController {
       }
 
       const tokens = await Promise.all([
-        this.authService.issueJWS({
+        this.ceramicService.issueJWS({
           cryptoAccounts: [address],
           name: bankidData.name,
           familyName: bankidData.family_name,
           givenName: bankidData.given_name,
           birthDate: birthdateISO8601,
         }),
-        this.authService.issueJWS({
+        this.ceramicService.issueJWS({
           identifier: bankidData.socialno,
           cryptoAccounts: [address],
         }),
