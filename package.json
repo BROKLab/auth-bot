@@ -27,7 +27,8 @@
     "studio": "npx prisma studio",
     "docker:build": "docker build -t brok-auth-bot .",
     "docker:start": "docker run -p 3010:3010 -e NODE_ENV=docker --name brok-auth-bot --network=brok-network brok-auth-bot",
-    "docker:remove": "docker container stop brok-auth-bot && docker container rm brok-auth-bot"
+    "docker:remove": "docker container stop brok-auth-bot && docker container rm brok-auth-bot",
+    "heroku:logs" : "heroku logs -a brok-auth-bot-stage -t"
   },
   "dependencies": {
     "@ceramicnetwork/3id-did-resolver": "^1.2.0-rc.9",
