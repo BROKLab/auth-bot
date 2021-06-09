@@ -27,9 +27,8 @@ export class CeramicService implements OnModuleInit, OnModuleDestroy {
   }
   async setDIDProvider() {
     // const seed = randomBytes(32);
-    const privateKey = this.configService.get<string>('PRIVATE_KEY').substr(3); // substr to remove 0x
-    const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'utf8')).slice(0, 32);
-
+    const privateKey = this.configService.get<string>('PRIVATE_KEY').substr(2);
+    const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'hex'));
     const provider = new Ed25519Provider(privateKeyArray);
     const resolver = {
       ...KeyDidResolver.getResolver(),
