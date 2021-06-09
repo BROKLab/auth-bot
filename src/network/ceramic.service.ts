@@ -27,8 +27,9 @@ export class CeramicService implements OnModuleInit, OnModuleDestroy {
   }
   async setDIDProvider() {
     // const seed = randomBytes(32);
-    const privateKey = this.configService.get<string>('PRIVATE_KEY').substr(2); // substr to remove 0x
-    const privateKeyArray = this.toUint8Array(privateKey, 'hex');
+    const privateKey = this.configService.get<string>('PRIVATE_KEY').substr(3); // substr to remove 0x
+    const privateKeyArray = Uint8Array.from(Buffer.from(privateKey, 'utf8')).slice(0, 32);
+
     const provider = new Ed25519Provider(privateKeyArray);
     const resolver = {
       ...KeyDidResolver.getResolver(),
@@ -37,6 +38,7 @@ export class CeramicService implements OnModuleInit, OnModuleDestroy {
     const did = new DID({ provider, resolver });
     await this.ceramic.setDID(did);
     await this.ceramic.did.authenticate();
+    console.log('Current DID', this.ceramic.did.id);
   }
   async verifyJWS(jws: string | DagJWS) {
     if (!this.ceramic.did) {
@@ -53,8 +55,5 @@ export class CeramicService implements OnModuleInit, OnModuleDestroy {
     // TODO Implement 1h 5m 20sec etc for expiresIn
     const jws = await this.ceramic.did.createJWS(payload);
     return jws;
-  }
-  private toUint8Array(text: string, encoding: BufferEncoding) {
-    return Uint8Array.from(Buffer.from(text, encoding));
   }
 }
