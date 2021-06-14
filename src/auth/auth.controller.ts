@@ -1,4 +1,4 @@
-import { Controller, Get, HttpException, HttpStatus, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { parse } from 'date-fns';
 import { nb } from 'date-fns/locale';
@@ -15,13 +15,13 @@ export class AuthController {
 
   @Post('/verify/bankid')
   async verify(
-    @Query()
-    query: {
+    @Body()
+    body: {
       verfiablePresentation: DagJWS;
     },
   ) {
     try {
-      const verfiedPresentation = await this.ceramicService.verifyJWS(query.verfiablePresentation);
+      const verfiedPresentation = await this.ceramicService.verifyJWS(body.verfiablePresentation);
       if (!verfiedPresentation.payload) {
         throw Error('No payload in verfied presentation, please set payload in JWS.');
       }
