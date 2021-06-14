@@ -64,7 +64,7 @@ describe('AuthController', () => {
 
     const jws = await did.createJWS({
       bankIdToken: token,
-      bankIdSignature: signature,
+      signedBankIdToken: signature,
       skipBlockchain: true,
       skipBankidVerify: true,
     });
@@ -82,8 +82,8 @@ describe('AuthController', () => {
         if (verified.payload.name) {
           expect(verified.payload.name).toBe('Lo, Morten');
         }
-        if (verified.payload.blockchainAccount) {
-          expect(verified.payload.blockchainAccount).toContain(wallet1.address);
+        if (verified.payload.blockchainAccounts) {
+          expect(verified.payload.blockchainAccounts).toContain(wallet1.address);
         }
       }),
     );

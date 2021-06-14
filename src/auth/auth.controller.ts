@@ -28,12 +28,12 @@ export class AuthController {
       const didId = verfiedPresentation.kid.split('#')[0];
       const payload: Partial<{
         bankIdToken: string;
-        bankIdSignature: string;
+        signedBankIdToken: string;
         skipBlockchain: boolean;
         skipBankidVerify: boolean;
       }> = verfiedPresentation.payload;
-      if (!payload.bankIdSignature || !payload.bankIdToken) {
-        throw Error('bankIdToken and bankIdSignature must be set in payload');
+      if (!payload.signedBankIdToken || !payload.bankIdToken) {
+        throw Error('bankIdToken and signedBankIdToken must be set in payload');
       }
 
       // Verfies token with cert from Criipto. Will throw if not verfiable agains cert form .env.
@@ -49,7 +49,7 @@ export class AuthController {
 
       const tokenHash = ethers.utils.id(payload.bankIdToken);
       const tokenHashBytes = ethers.utils.arrayify(tokenHash);
-      const address = ethers.utils.verifyMessage(tokenHashBytes, payload.bankIdSignature);
+      const address = ethers.utils.verifyMessage(tokenHashBytes, payload.signedBankIdToken);
       // const uuidHash = ethers.utils.keccak256(ethers.utils.id(bankidData.socialno));
 
       // Save auth to blockchain
@@ -90,7 +90,6 @@ export class AuthController {
       const tokens = await Promise.all([
         this.ceramicService.issueJWS(
           {
-            blockchainAccount: [address],
             name: bankidData.name,
             familyName: bankidData.family_name,
             givenName: bankidData.given_name,
@@ -101,7 +100,7 @@ export class AuthController {
         this.ceramicService.issueJWS(
           {
             identifier: bankidData.socialno,
-            blockchainAccount: [address],
+            blockchainAccounts: [address],
           },
           didId,
         ),
