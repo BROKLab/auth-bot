@@ -1,7 +1,8 @@
-import { Controller, Get, HttpException, HttpStatus, Query } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, Post, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { parse } from 'date-fns';
 import { nb } from 'date-fns/locale';
+import { DagJWS, DID } from 'dids';
 import { ethers } from 'ethers';
 import { decode, verify } from 'jsonwebtoken';
 import { CeramicService } from '../network/ceramic.service';
@@ -12,37 +13,49 @@ import { BankidData } from './bankid.types';
 export class AuthController {
   constructor(private readonly configService: ConfigService, private readonly ethereumService: EthereumService, private readonly ceramicService: CeramicService) {}
 
-  @Get('/verify/bankid')
+  @Post('/verify/bankid')
   async verify(
     @Query()
     query: {
-      bankIdToken: string;
-      signature: string;
-      skipBlockchain?: boolean;
-      skipBankidVerify?: boolean;
+      verfiablePresentation: DagJWS;
     },
   ) {
     try {
-      // Verfies token with cert from Criipto. Will throe if not verfiable agains cert form .env.
-      const bankidData = decode(query.bankIdToken) as BankidData;
+      const verfiedPresentation = await this.ceramicService.verifyJWS(query.verfiablePresentation);
+      if (!verfiedPresentation.payload) {
+        throw Error('No payload in verfied presentation, please set payload in JWS.');
+      }
+      const didId = verfiedPresentation.kid.split('#')[0];
+      const payload: Partial<{
+        bankIdToken: string;
+        bankIdSignature: string;
+        skipBlockchain: boolean;
+        skipBankidVerify: boolean;
+      }> = verfiedPresentation.payload;
+      if (!payload.bankIdSignature || !payload.bankIdToken) {
+        throw Error('bankIdToken and bankIdSignature must be set in payload');
+      }
+
+      // Verfies token with cert from Criipto. Will throw if not verfiable agains cert form .env.
+      const bankidData = decode(payload.bankIdToken) as BankidData;
       const cert = this.configService.get<string>('CRIIPTO_CERT');
-      const skipTokenVerify = query.skipBankidVerify && this.configService.get('NODE_ENV') !== 'production';
+      const skipTokenVerify = payload.skipBankidVerify && this.configService.get('NODE_ENV') !== 'production';
       if (skipTokenVerify) {
         // TODO : Should put som alert logging on this so this does not accidenalty happen.
         console.debug('Skipping bankId Verification because we are not in production');
       } else {
-        verify(query.bankIdToken, cert);
+        verify(payload.bankIdToken, cert);
       }
 
-      const tokenHash = ethers.utils.id(query.bankIdToken);
+      const tokenHash = ethers.utils.id(payload.bankIdToken);
       const tokenHashBytes = ethers.utils.arrayify(tokenHash);
-      const address = ethers.utils.verifyMessage(tokenHashBytes, query.signature);
+      const address = ethers.utils.verifyMessage(tokenHashBytes, payload.bankIdSignature);
       // const uuidHash = ethers.utils.keccak256(ethers.utils.id(bankidData.socialno));
 
       // Save auth to blockchain
       let txHash = null;
       let blockNumber = null;
-      const skipBlockchain = this.configService.get('NODE_ENV') !== 'production' && query.skipBlockchain;
+      const skipBlockchain = this.configService.get('NODE_ENV') !== 'production' && payload.skipBlockchain;
       if (skipBlockchain) {
         console.debug('Skipping onChain verification because we are not in production');
       } else {
@@ -75,17 +88,23 @@ export class AuthController {
       }
 
       const tokens = await Promise.all([
-        this.ceramicService.issueJWS({
-          cryptoAccounts: [address],
-          name: bankidData.name,
-          familyName: bankidData.family_name,
-          givenName: bankidData.given_name,
-          birthDate: birthdateISO8601,
-        }),
-        this.ceramicService.issueJWS({
-          identifier: bankidData.socialno,
-          cryptoAccounts: [address],
-        }),
+        this.ceramicService.issueJWS(
+          {
+            blockchainAccount: [address],
+            name: bankidData.name,
+            familyName: bankidData.family_name,
+            givenName: bankidData.given_name,
+            birthDate: birthdateISO8601,
+          },
+          didId,
+        ),
+        this.ceramicService.issueJWS(
+          {
+            identifier: bankidData.socialno,
+            blockchainAccount: [address],
+          },
+          didId,
+        ),
       ]);
       return tokens;
     } catch (error) {

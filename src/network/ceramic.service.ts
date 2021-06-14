@@ -46,11 +46,11 @@ export class CeramicService implements OnModuleInit, OnModuleDestroy {
     return this.ceramic.did.verifyJWS(jws);
   }
 
-  async issueJWS(payload: any) {
+  async issueJWS(payload: any, subject: string) {
     if (!this.ceramic.did) {
       throw Error('issueJWS, but DID not set.');
     }
-    payload = { iat: getUnixTime(new Date()), ...payload };
+    payload = { iat: getUnixTime(new Date()), subject, ...payload };
     // TODO Implement 1h 5m 20sec etc for expiresIn
     const jws = await this.ceramic.did.createJWS(payload);
     return jws;
