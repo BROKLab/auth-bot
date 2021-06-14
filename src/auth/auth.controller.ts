@@ -17,11 +17,12 @@ export class AuthController {
   async verify(
     @Body()
     body: {
-      verfiablePresentation: DagJWS;
+      jws: DagJWS;
     },
   ) {
     try {
-      const verfiedPresentation = await this.ceramicService.verifyJWS(body.verfiablePresentation);
+      console.log(body.jws);
+      const verfiedPresentation = await this.ceramicService.verifyJWS(body.jws);
       if (!verfiedPresentation.payload) {
         throw Error('No payload in verfied presentation, please set payload in JWS.');
       }
