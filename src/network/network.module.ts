@@ -1,11 +1,11 @@
 import { Module, ModuleMetadata } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { CeramicService } from './ceramic.service';
+import { DidService } from './did.service';
 import { EthereumService } from './ethereum.service';
 
 export const NetworkModuleMeta: ModuleMetadata = {
-  providers: [CeramicService, EthereumService],
-  exports: [CeramicService, EthereumService],
+  providers: [DidService, EthereumService],
+  exports: [DidService, EthereumService],
   imports: [ConfigModule.forRoot({})],
 };
 @Module(NetworkModuleMeta)

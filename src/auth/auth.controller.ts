@@ -5,13 +5,13 @@ import { nb } from 'date-fns/locale';
 import { DagJWS, DID } from 'dids';
 import { ethers } from 'ethers';
 import { decode, verify } from 'jsonwebtoken';
-import { CeramicService } from '../network/ceramic.service';
+import { DidService } from '../network/did.service';
 import { EthereumService } from '../network/ethereum.service';
 import { BankidData } from './bankid.types';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly configService: ConfigService, private readonly ethereumService: EthereumService, private readonly ceramicService: CeramicService) {}
+  constructor(private readonly configService: ConfigService, private readonly ethereumService: EthereumService, private readonly didService: DidService) {}
 
   @Post('/verify/bankid')
   async verify(
@@ -22,7 +22,7 @@ export class AuthController {
   ) {
     try {
       console.log(body.jws);
-      const verfiedPresentation = await this.ceramicService.verifyJWS(body.jws);
+      const verfiedPresentation = await this.didService.verifyJWS(body.jws);
       if (!verfiedPresentation.payload) {
         throw Error('No payload in verfied presentation, please set payload in JWS.');
       }
@@ -89,7 +89,7 @@ export class AuthController {
       }
 
       const tokens = await Promise.all([
-        this.ceramicService.issueJWS(
+        this.didService.issueJWS(
           {
             name: bankidData.name,
             familyName: bankidData.family_name,
@@ -98,7 +98,7 @@ export class AuthController {
           },
           didId,
         ),
-        this.ceramicService.issueJWS(
+        this.didService.issueJWS(
           {
             identifier: bankidData.socialno,
             blockchainAccounts: [address],
