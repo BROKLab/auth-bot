@@ -24,8 +24,15 @@ describe('DbService', () => {
   it('should list', async () => {
     await service.createIdentity();
     const identities = await service.listIdentities();
-    console.log(identities);
+    console.log('identities => ', identities);
 
     expect(identities.length).toBeGreaterThanOrEqual(1);
   });
+  it('should getIssuer', async () => {
+    await service.getIssuer();
+  });
+  //   it('should create JWT', async () => {
+  //     const jwt = await service.createJWT({ test: 123 });
+  //     console.log('jwt => ', jwt);
+  //   });
 });

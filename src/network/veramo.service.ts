@@ -23,11 +23,12 @@ import { Entities, KeyStore, DIDStore, IDataStoreORM } from '@veramo/data-store'
 
 // TypeORM is installed with `@veramo/data-store`
 import { createConnection, Connection } from 'typeorm';
+import { CredentialIssuer, ICredentialIssuer } from '@veramo/credential-w3c';
 const DATABASE_FILE = 'veramo.db.sqlite';
 
 @Injectable()
 export class VeramoService implements OnModuleInit, OnModuleDestroy {
-  private agent: TAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver>;
+  private agent: TAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>;
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
@@ -38,7 +39,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       logging: ['error', 'info', 'warn'],
       entities: Entities,
     });
-    const agent = createAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver>({
+    const agent = createAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>({
       plugins: [
         new KeyManager({
           store: new KeyStore(dbConnection),
@@ -60,6 +61,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
             ...getDidKeyResolver(),
           }),
         }),
+        new CredentialIssuer(),
       ],
     });
     this.agent = agent;
@@ -82,7 +84,25 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
     return identifiers;
   }
 
-  async createJWS() {
-    this.agent.claim;
+  async getIssuer() {
+    const issuer = await this.agent.didManagerFind({
+      provider: 'did:key:z6Mkk1V84BS2VGjRyHEsC72w1FBpjLTtUN2bdqiHzpuxr9X8',
+    });
+    console.log('issuer', issuer);
+  }
+
+  async issueCredential(data: Record<string, any>, subjectDidId: string) {
+    // const jwt = await this.agent.keyManagerSignJWT({ kid: '528bce840023b038cf9d65fe7dcbe36b0a83302c84477b8b0e758cbe70eadacb', data: JSON.stringify(data) });
+    // const vc = await this.agent.createVerifiableCredential({
+    //   proofFormat: 'jwt',
+    //   save: true,
+    //   credential: {
+    //     credentialSubject: {
+    //       id: subjectDidId,
+    //     },
+    //     issuer:
+    //   },
+    // });
+    // return jwt;
   }
 }
