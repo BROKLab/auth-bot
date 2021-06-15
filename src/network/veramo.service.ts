@@ -92,17 +92,24 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   }
 
   async issueCredential(data: Record<string, any>, subjectDidId: string) {
-    // const jwt = await this.agent.keyManagerSignJWT({ kid: '528bce840023b038cf9d65fe7dcbe36b0a83302c84477b8b0e758cbe70eadacb', data: JSON.stringify(data) });
-    // const vc = await this.agent.createVerifiableCredential({
-    //   proofFormat: 'jwt',
-    //   save: true,
-    //   credential: {
-    //     credentialSubject: {
-    //       id: subjectDidId,
-    //     },
-    //     issuer:
-    //   },
-    // });
-    // return jwt;
+    const jwt = await this.agent.keyManagerSignJWT({ kid: '528bce840023b038cf9d65fe7dcbe36b0a83302c84477b8b0e758cbe70eadacb', data: JSON.stringify(data) });
+
+    const vc = await this.agent.createVerifiableCredential({
+      proofFormat: 'jwt',
+      save: true,
+      credential: {
+        credentialSubject: {
+          id: subjectDidId,
+        },
+        issuer: {
+          id: 'did:key:z6Mkk1V84BS2VGjRyHEsC72w1FBpjLTtUN2bdqiHzpuxr9X8',
+        },
+        type: ['VerifiableCredential', 'PersonCredential'],
+        '@context': ['https://www.w3.org/2018/credentials/v1', 'https://www.w3.org/2018/credentials/examples/v1'],
+      },
+    });
+    console.log('vc =>', vc);
+
+    return jwt;
   }
 }

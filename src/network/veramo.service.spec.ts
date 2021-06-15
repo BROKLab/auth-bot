@@ -31,8 +31,9 @@ describe('DbService', () => {
   it('should getIssuer', async () => {
     await service.getIssuer();
   });
-  //   it('should create JWT', async () => {
-  //     const jwt = await service.createJWT({ test: 123 });
-  //     console.log('jwt => ', jwt);
-  //   });
+  it('should create VC', async () => {
+    const _data = { name: 'Ola Nordman' };
+    const jwt = await service.issueCredential(_data, 'did:key:z6Mkge3wTYspATmbggVajdYXtHTWfwC3icYDorHFZMpGeeyj');
+    console.log('jwt => ', jwt);
+  });
 });
