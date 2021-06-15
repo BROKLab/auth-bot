@@ -29,10 +29,11 @@ const DATABASE_FILE = 'veramo.db.sqlite';
 @Injectable()
 export class VeramoService implements OnModuleInit, OnModuleDestroy {
   private agent: TAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>;
+  private dbConnection: Promise<Connection>;
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
-    const dbConnection = createConnection({
+    this.dbConnection = createConnection({
       type: 'sqlite',
       database: DATABASE_FILE,
       synchronize: true,
@@ -42,13 +43,13 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
     const agent = createAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>({
       plugins: [
         new KeyManager({
-          store: new KeyStore(dbConnection),
+          store: new KeyStore(this.dbConnection),
           kms: {
             local: new KeyManagementSystem(),
           },
         }),
         new DIDManager({
-          store: new DIDStore(dbConnection),
+          store: new DIDStore(this.dbConnection),
           defaultProvider: 'did:key',
           providers: {
             'did:key': new KeyDIDProvider({
@@ -65,9 +66,15 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       ],
     });
     this.agent = agent;
+    this.provisionDb();
   }
   async onModuleDestroy() {
-    // await this.connection.close();
+    const connection = await this.dbConnection;
+    await connection.close();
+  }
+
+  async provisionDb() {
+    // this.agent.keyManagerImport({});
   }
 
   async createIdentity() {
@@ -85,8 +92,8 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   }
 
   async getIssuer() {
-    const issuer = await this.agent.didManagerFind({
-      provider: 'did:key:z6Mkk1V84BS2VGjRyHEsC72w1FBpjLTtUN2bdqiHzpuxr9X8',
+    const issuer = await this.agent.didManagerGet({
+      did: 'did:key:z6Mkk1V84BS2VGjRyHEsC72w1FBpjLTtUN2bdqiHzpuxr9X8',
     });
     console.log('issuer', issuer);
   }
