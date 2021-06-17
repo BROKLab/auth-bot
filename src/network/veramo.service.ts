@@ -20,7 +20,7 @@ import { DIDResolverPlugin } from '@veramo/did-resolver';
 import { Resolver } from 'did-resolver';
 
 // Storage plugin using TypeOrm
-import { Entities, KeyStore, DIDStore, IDataStoreORM } from '@veramo/data-store';
+import { Entities, KeyStore, DIDStore, IDataStoreORM, DataStore, DataStoreORM } from '@veramo/data-store';
 
 // TypeORM is installed with `@veramo/data-store`
 import { createConnection, Connection } from 'typeorm';
@@ -69,12 +69,14 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
           }),
           new CredentialIssuer(),
           new MessageHandler({ messageHandlers: [new JwtMessageHandler(), new W3cMessageHandler()] }),
+          new DataStore(this.dbConnection),
+          new DataStoreORM(this.dbConnection),
         ],
       });
       this.agent = agent;
       this.issuer = this.configService.get<string>('ISSUER_DID');
       await this.provisionDb({
-        did: this.configService.get<string>('ISSUER_DID'),
+        did: this.issuer,
         kid: this.configService.get<string>('ISSUER_KID'),
         publicKeyHex: this.configService.get<string>('ISSUER_PUBLIC_KEY_HEX'),
         privateKeyHex: this.configService.get<string>('ISSUER_PRIVATE_KEY_HEX'),
@@ -127,7 +129,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   async issueCredential(data: Record<string, any>, subjectDidId: string) {
     const vc = await this.agent.createVerifiableCredential({
       proofFormat: 'jwt',
-      // save: true,
+      save: true,
       credential: {
         credentialSubject: {
           ...data,
@@ -151,5 +153,10 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       console.log('JWT not valid => ', error);
       return false;
     }
+  }
+
+  async findCredentials(did: string) {
+    const credentials = await this.agent.dataStoreORMGetVerifiableCredentials({ where: [{ column: 'subject', value: [did] }] });
+    return credentials;
   }
 }

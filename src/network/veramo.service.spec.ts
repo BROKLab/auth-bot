@@ -5,6 +5,8 @@ import { VeramoService } from './veramo.service';
 describe('DbService', () => {
   let service: VeramoService;
   let module: TestingModule;
+
+  const nameClaim = { name: 'Ola Nordman' };
   beforeEach(async () => {
     module = await Test.createTestingModule(NetworkModuleMeta).compile();
     service = module.get<VeramoService>(VeramoService);
@@ -29,12 +31,24 @@ describe('DbService', () => {
     const issuer = await service.getIssuer();
     expect(issuer).toBeDefined();
   });
-  it('should create VC nad verify VC against issuer', async () => {
-    const _data = { name: 'Ola Nordman' };
-    const vc = await service.issueCredential(_data, 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf');
-    // const issuer = await service.getIssuer();
+  it('should create VC and verify VC against issuer', async () => {
+    const subject = 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf';
+    const vc = await service.issueCredential(nameClaim, subject);
+    const issuer = await service.getIssuer();
     const validVC = await service.verifyVC(vc.proof.jwt);
 
     expect(validVC).toBe(true);
+    expect(vc.issuer.id).toBe(issuer.did);
+    expect(vc.credentialSubject.id).toBe(subject);
+  });
+
+  it('should find credentials for did', async () => {
+    const subject = 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf';
+    await service.issueCredential(nameClaim, subject);
+    const vcs = await service.findCredentials(subject);
+
+    const vcWithName = vcs.find((vc) => 'name' in vc.verifiableCredential.credentialSubject);
+    expect(vcWithName).toBeDefined();
+    expect(vcWithName.verifiableCredential.credentialSubject.name).toBe(nameClaim.name);
   });
 });
