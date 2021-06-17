@@ -18,6 +18,8 @@ import { KeyManagementSystem, SecretBox } from '@veramo/kms-local';
 // Custom resolvers
 import { DIDResolverPlugin } from '@veramo/did-resolver';
 import { Resolver } from 'did-resolver';
+import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
+import { EthrDIDProvider } from '@veramo/did-provider-ethr';
 
 // Storage plugin using TypeOrm
 import { Entities, KeyStore, DIDStore, IDataStoreORM, DataStore, DataStoreORM } from '@veramo/data-store';
@@ -34,6 +36,8 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   private agent: TAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>;
   private dbConnection: Promise<Connection>;
   private issuer: string;
+  private defaultDIDProvider = 'did:ethr:brok';
+  private encrypted = true;
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
@@ -48,15 +52,23 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       const agent = createAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>({
         plugins: [
           new KeyManager({
-            store: new KeyStore(this.dbConnection, new SecretBox('29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c')),
+            store: this.encrypted
+              ? new KeyStore(this.dbConnection, new SecretBox('29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c'))
+              : new KeyStore(this.dbConnection),
             kms: {
               local: new KeyManagementSystem(),
             },
           }),
           new DIDManager({
             store: new DIDStore(this.dbConnection),
-            defaultProvider: 'did:key',
+            defaultProvider: this.defaultDIDProvider,
             providers: {
+              'did:ethr:brok': new EthrDIDProvider({
+                defaultKms: 'local',
+                network: 'brok',
+                rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
+                registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
+              }),
               'did:key': new KeyDIDProvider({
                 defaultKms: 'local',
               }),
@@ -65,6 +77,12 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
           new DIDResolverPlugin({
             resolver: new Resolver({
               ...getDidKeyResolver(),
+              ...ethrDidResolver({
+                rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
+                registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
+                chainId: 7766,
+                name: 'brok',
+              }),
             }),
           }),
           new CredentialIssuer(),
@@ -94,7 +112,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   async provisionDb(keyData: { did: string; kid: string; publicKeyHex: string; privateKeyHex: string }) {
     return await this.agent.didManagerImport({
       services: [],
-      provider: 'did:key',
+      provider: this.defaultDIDProvider,
       did: keyData.did,
       controllerKeyId: keyData.kid,
       keys: [
@@ -110,7 +128,9 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   }
 
   async createIdentity() {
-    const identity = await this.agent.didManagerCreate();
+    const identity = await this.agent.didManagerCreate({
+      kms: 'local',
+    });
     return identity;
   }
 

@@ -15,7 +15,6 @@ describe('DbService', () => {
   afterEach(async () => {
     await module.close();
   });
-
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -32,7 +31,7 @@ describe('DbService', () => {
     expect(issuer).toBeDefined();
   });
   it('should create VC and verify VC against issuer', async () => {
-    const subject = 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf';
+    const subject = 'did:ethr:brok:0x03719c5f561b5342216fd3b204d890cf157f192f7bf40ed3f9301c5ca05690726d';
     const vc = await service.issueCredential(nameClaim, subject);
     const issuer = await service.getIssuer();
     const validVC = await service.verifyVC(vc.proof.jwt);
