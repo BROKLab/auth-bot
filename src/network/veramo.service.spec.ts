@@ -21,19 +21,20 @@ describe('DbService', () => {
     const identity = await service.createIdentity();
     expect(identity.did).toContain('did');
   });
-  it('should list', async () => {
-    await service.createIdentity();
+  it('should have atleast one identity in list, because it has been provsioned', async () => {
     const identities = await service.listIdentities();
-    console.log('identities => ', identities);
-
     expect(identities.length).toBeGreaterThanOrEqual(1);
   });
   it('should getIssuer', async () => {
-    await service.getIssuer();
+    const issuer = await service.getIssuer();
+    expect(issuer).toBeDefined();
   });
-  it('should create VC', async () => {
+  it('should create VC nad verify VC against issuer', async () => {
     const _data = { name: 'Ola Nordman' };
-    const jwt = await service.issueCredential(_data, 'did:key:z6Mkge3wTYspATmbggVajdYXtHTWfwC3icYDorHFZMpGeeyj');
-    console.log('jwt => ', jwt);
+    const vc = await service.issueCredential(_data, 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf');
+    // const issuer = await service.getIssuer();
+    const validVC = await service.verifyVC(vc.proof.jwt);
+
+    expect(validVC).toBe(true);
   });
 });
