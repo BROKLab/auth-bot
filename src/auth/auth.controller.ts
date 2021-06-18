@@ -21,6 +21,9 @@ export class AuthController {
     },
   ) {
     try {
+      // console.log(body.verifiablePresentation);
+      // const verfiedPresentation = await this.veramoService.verifyVC(body.verifiablePresentation.proof.jwt);
+
       console.log(body.jws);
       const verfiedPresentation = await this.didService.verifyJWS(body.jws);
       if (!verfiedPresentation.payload) {

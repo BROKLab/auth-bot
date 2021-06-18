@@ -1,35 +1,13 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-
 // Core interfaces
-import { TKeyType, createAgent, IDIDManager, IResolver, IDataStore, IKeyManager, Agent, TAgent, VerifiableCredential } from '@veramo/core';
-
-// Core identity manager plugin
-import { MessageHandler } from '@veramo/message-handler';
-import { DIDManager } from '@veramo/did-manager';
-import { KeyDIDProvider, getDidKeyResolver } from '@veramo/did-provider-key';
-
-// Core key manager plugin
-import { KeyManager } from '@veramo/key-manager';
-
-// Custom key management system for RN
-import { KeyManagementSystem, SecretBox } from '@veramo/kms-local';
-
-// Custom resolvers
-import { DIDResolverPlugin } from '@veramo/did-resolver';
-import { Resolver } from 'did-resolver';
-import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
-import { EthrDIDProvider } from '@veramo/did-provider-ethr';
-
+import { IDataStore, IDIDManager, IKeyManager, IResolver, TAgent, TKeyType, VerifiableCredential } from '@veramo/core';
+import { ICredentialIssuer } from '@veramo/credential-w3c';
 // Storage plugin using TypeOrm
-import { Entities, KeyStore, DIDStore, IDataStoreORM, DataStore, DataStoreORM } from '@veramo/data-store';
-
+import { IDataStoreORM } from '@veramo/data-store';
 // TypeORM is installed with `@veramo/data-store`
-import { createConnection, Connection } from 'typeorm';
-import { CredentialIssuer, ICredentialIssuer, W3cMessageHandler } from '@veramo/credential-w3c';
-import { JwtMessageHandler } from '@veramo/did-jwt';
-
-const DATABASE_FILE = 'veramo.db.sqlite';
+import { Connection } from 'typeorm';
+import { getDbConnection, initAgent } from '../auth/veramo.utils';
 
 @Injectable()
 export class VeramoService implements OnModuleInit, OnModuleDestroy {
@@ -37,61 +15,15 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   private dbConnection: Promise<Connection>;
   private issuer: string;
   private defaultDIDProvider = 'did:ethr:brok';
-  private encrypted = false;
+  private encrypted = true;
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
     try {
-      this.dbConnection = createConnection({
-        type: 'sqlite',
-        database: DATABASE_FILE,
-        synchronize: true,
-        logging: ['error', 'info', 'warn'],
-        entities: Entities,
+      this.dbConnection = getDbConnection('veramo.db.sqlite');
+      this.agent = initAgent(this.dbConnection, {
+        secretKey: '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c',
       });
-      const agent = createAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer>({
-        plugins: [
-          new KeyManager({
-            store: this.encrypted
-              ? new KeyStore(this.dbConnection, new SecretBox('29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c'))
-              : new KeyStore(this.dbConnection),
-            kms: {
-              local: new KeyManagementSystem(),
-            },
-          }),
-          new DIDManager({
-            store: new DIDStore(this.dbConnection),
-            defaultProvider: this.defaultDIDProvider,
-            providers: {
-              'did:ethr:brok': new EthrDIDProvider({
-                defaultKms: 'local',
-                network: 'brok',
-                rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
-                registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
-              }),
-              'did:key': new KeyDIDProvider({
-                defaultKms: 'local',
-              }),
-            },
-          }),
-          new DIDResolverPlugin({
-            resolver: new Resolver({
-              ...getDidKeyResolver(),
-              ...ethrDidResolver({
-                rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
-                registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
-                chainId: 7766,
-                name: 'brok',
-              }),
-            }),
-          }),
-          new CredentialIssuer(),
-          new MessageHandler({ messageHandlers: [new JwtMessageHandler(), new W3cMessageHandler()] }),
-          new DataStore(this.dbConnection),
-          new DataStoreORM(this.dbConnection),
-        ],
-      });
-      this.agent = agent;
       this.issuer = this.configService.get<string>('ISSUER_DID');
       await this.provisionDb({
         did: this.issuer,
@@ -107,7 +39,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   }
   async onModuleDestroy() {
     const connection = await this.dbConnection;
-    await connection.close();
+    if (connection) await connection.close();
   }
 
   async provisionDb(keyData: { did: string; kid: string; publicKeyHex: string; privateKeyHex: string; keyType: string }) {
@@ -174,6 +106,18 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       console.log('JWT not valid => ', error);
       return false;
     }
+  }
+
+  async createVerfiablePresentation(verifier: string, verifiableCredentials: VerifiableCredential[]) {
+    const vs = await this.agent.createVerifiablePresentation({
+      presentation: {
+        holder: this.issuer,
+        verifier: [verifier],
+        verifiableCredential: verifiableCredentials,
+      },
+      proofFormat: 'jwt',
+    });
+    return vs;
   }
 
   async findCredentials(did: string) {

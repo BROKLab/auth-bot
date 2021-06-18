@@ -7,6 +7,7 @@ describe('DbService', () => {
   let module: TestingModule;
 
   const nameClaim = { name: 'Ola Nordman' };
+  const ageClaim = { age: 22 };
   beforeEach(async () => {
     module = await Test.createTestingModule(NetworkModuleMeta).compile();
     service = module.get<VeramoService>(VeramoService);
@@ -33,7 +34,7 @@ describe('DbService', () => {
   it('should create VC and verify VC against issuer', async () => {
     const subject = 'did:ethr:brok:0x03719c5f561b5342216fd3b204d890cf157f192f7bf40ed3f9301c5ca05690726d';
     const vc = await service.issueCredential(nameClaim, subject);
-    console.log('VC => ,', vc);
+    console.log('vc => ,', vc);
     console.log('jwt => ,', vc.proof.jwt);
 
     const issuer = await service.getIssuer();
@@ -52,5 +53,13 @@ describe('DbService', () => {
     const vcWithName = vcs.find((vc) => 'name' in vc.verifiableCredential.credentialSubject);
     expect(vcWithName).toBeDefined();
     expect(vcWithName.verifiableCredential.credentialSubject.name).toBe(nameClaim.name);
+  });
+  it('should create verfiable presentation', async () => {
+    const subject = 'did:ethr:brok:0x0260cc4eb9ce0614f920d3f47cfe4a5b177d64a00e04c50fdf392b1ada891aa675';
+    const verifier = await service.createIdentity();
+    const nameVC = await service.issueCredential(nameClaim, subject);
+    const ageVC = await service.issueCredential(ageClaim, subject);
+    const vs = await service.createVerfiablePresentation(verifier.did, [nameVC, ageVC]);
+    console.log('vs => ', vs);
   });
 });
