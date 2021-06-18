@@ -33,6 +33,9 @@ describe('DbService', () => {
   it('should create VC and verify VC against issuer', async () => {
     const subject = 'did:ethr:brok:0x03719c5f561b5342216fd3b204d890cf157f192f7bf40ed3f9301c5ca05690726d';
     const vc = await service.issueCredential(nameClaim, subject);
+    console.log('VC => ,', vc);
+    console.log('jwt => ,', vc.proof.jwt);
+
     const issuer = await service.getIssuer();
     const validVC = await service.verifyVC(vc.proof.jwt);
 
@@ -42,7 +45,7 @@ describe('DbService', () => {
   });
 
   it('should find credentials for did', async () => {
-    const subject = 'did:key:z6MkfNm3yuhbTFSUa2BCwE7CA8fnUy3U2MSeMyCLXf5dJVyf';
+    const subject = 'did:ethr:brok:0x0260cc4eb9ce0614f920d3f47cfe4a5b177d64a00e04c50fdf392b1ada891aa675';
     await service.issueCredential(nameClaim, subject);
     const vcs = await service.findCredentials(subject);
 

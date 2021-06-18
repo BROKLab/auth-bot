@@ -37,7 +37,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
   private dbConnection: Promise<Connection>;
   private issuer: string;
   private defaultDIDProvider = 'did:ethr:brok';
-  private encrypted = true;
+  private encrypted = false;
   constructor(private readonly configService: ConfigService) {}
 
   async onModuleInit() {
@@ -98,6 +98,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
         kid: this.configService.get<string>('ISSUER_KID'),
         publicKeyHex: this.configService.get<string>('ISSUER_PUBLIC_KEY_HEX'),
         privateKeyHex: this.configService.get<string>('ISSUER_PRIVATE_KEY_HEX'),
+        keyType: this.configService.get<string>('ISSUER_KEY_TYPE'),
       });
     } catch (error) {
       console.log(error);
@@ -109,7 +110,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
     await connection.close();
   }
 
-  async provisionDb(keyData: { did: string; kid: string; publicKeyHex: string; privateKeyHex: string }) {
+  async provisionDb(keyData: { did: string; kid: string; publicKeyHex: string; privateKeyHex: string; keyType: string }) {
     return await this.agent.didManagerImport({
       services: [],
       provider: this.defaultDIDProvider,
@@ -119,7 +120,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
         {
           kid: keyData.kid,
           kms: 'local',
-          type: <TKeyType>'Ed25519',
+          type: <TKeyType>keyData.keyType,
           publicKeyHex: keyData.publicKeyHex,
           privateKeyHex: keyData.privateKeyHex,
         },
