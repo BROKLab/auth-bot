@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NetworkModuleMeta } from './network.module';
 import { VeramoService } from './veramo.service';
 
-describe('DbService', () => {
+describe('Veramo tests', () => {
   let service: VeramoService;
   let module: TestingModule;
 

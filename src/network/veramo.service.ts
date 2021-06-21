@@ -7,7 +7,7 @@ import { ICredentialIssuer } from '@veramo/credential-w3c';
 import { IDataStoreORM } from '@veramo/data-store';
 // TypeORM is installed with `@veramo/data-store`
 import { Connection } from 'typeorm';
-import { getDbConnection, initAgent } from '../auth/veramo.utils';
+import { getDbConnection, initAgent } from './veramo.utils';
 
 @Injectable()
 export class VeramoService implements OnModuleInit, OnModuleDestroy {

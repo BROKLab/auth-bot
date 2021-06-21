@@ -4,7 +4,7 @@ import { ethers } from 'ethers';
 import { AuthController } from './auth.controller';
 import { AuthModuleMeta } from './auth.module';
 import { BANKID_TEST_TOKEN2 } from './test.data';
-import { getDbConnection, initAgent } from './veramo.utils';
+import { getDbConnection, initAgent } from '../network/veramo.utils';
 
 // Because we are doing a blockchain tx we need to increase the async test timeout
 jest.setTimeout(20000);
