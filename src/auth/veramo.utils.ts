@@ -16,6 +16,7 @@ import { KeyManagementSystem, SecretBox } from '@veramo/kms-local';
 // Core identity manager plugin
 import { MessageHandler } from '@veramo/message-handler';
 import { Resolver } from 'did-resolver';
+import { ethers } from 'ethers';
 import { getResolver as ethrDidResolver } from 'ethr-did-resolver';
 // TypeORM is installed with `@veramo/data-store`
 import { Connection, createConnection } from 'typeorm';
@@ -47,7 +48,7 @@ export function getAgentConfig(dbConnection: Promise<Connection>, defaultDidProv
           'did:ethr:brok': new EthrDIDProvider({
             defaultKms: 'local',
             network: 'brok',
-            rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
+            rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io',
             registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
           }),
           'did:key': new KeyDIDProvider({
@@ -59,7 +60,12 @@ export function getAgentConfig(dbConnection: Promise<Connection>, defaultDidProv
         resolver: new Resolver({
           ...getDidKeyResolver(),
           ...ethrDidResolver({
-            rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io/',
+            // rpcUrl: 'https://e0avzugh9j:5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI@e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io',
+            provider: new ethers.providers.JsonRpcProvider({
+              url: 'https://e0mvr9jrs7-e0iwsftiw5-rpc.de0-aws.kaleido.io',
+              user: 'e0avzugh9j',
+              password: '5VOuyz9VPLenxC-zB2nvrWOlfDrRlSlcg0VZyIAvEeI',
+            }),
             registry: '0x28e1b9Be7aDb104ef1989821e5Cb1d6eB4294eA6',
             chainId: 7766,
             name: 'brok',
