@@ -1,25 +1,18 @@
-import KeyDidResolver from 'key-did-resolver';
-import { getResolver as EthrGetResolver } from 'ethr-did-resolver';
-import { EthrDID } from 'ethr-did';
-import CeramicClient from '@ceramicnetwork/http-client';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { randomBytes } from 'crypto';
 import { ethers } from 'ethers';
-import { Ed25519Provider } from 'key-did-provider-ed25519';
 import { AuthController } from './auth.controller';
 import { AuthModuleMeta } from './auth.module';
 import { BANKID_TEST_TOKEN2 } from './test.data';
-import { DID } from 'dids';
-import { ConfigService } from '@nestjs/config';
+import { getDbConnection, initAgent } from '../network/veramo.utils';
 
 // Because we are doing a blockchain tx we need to increase the async test timeout
 jest.setTimeout(20000);
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let config: ConfigService;
+  let configService: ConfigService;
   let module: TestingModule;
-
   //Drop database
   beforeAll(async () => {
     const module = await Test.createTestingModule(AuthModuleMeta).compile();
@@ -30,7 +23,7 @@ describe('AuthController', () => {
     module = await Test.createTestingModule(AuthModuleMeta).compile();
     await module.init();
     controller = module.get<AuthController>(AuthController);
-    config = module.get<ConfigService>(ConfigService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   afterEach(async () => {
@@ -42,44 +35,59 @@ describe('AuthController', () => {
   });
 
   it('should get VCs of idnetifier, name and blockchainAccount ', async () => {
-    const wallet = ethers.Wallet.createRandom();
-    const seed = randomBytes(32);
-    // const privateKeyArray = Uint8Array.from(Buffer.from(wallet1.privateKey, 'hex'));
-    const provider = new Ed25519Provider(seed);
-    const resolver = {
-      ...KeyDidResolver.getResolver(),
-    };
-    const did = new DID({ provider, resolver });
-    await did.authenticate();
-    const token = BANKID_TEST_TOKEN2;
-    const tokenHash = ethers.utils.id(token);
-    const tokenHashBytes = ethers.utils.arrayify(tokenHash);
-    const signature = await wallet.signMessage(tokenHashBytes);
-
-    const jws = await did.createJWS({
-      bankIdToken: token,
-      signedBankIdToken: signature,
-      skipBlockchain: true,
-      skipBankidVerify: true,
+    const dbConnection = getDbConnection('wallet.db.sqlite');
+    const agent = initAgent(dbConnection, {
+      secretKey: '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c',
     });
+    const identity = await agent.didManagerCreate();
+    const vc = await agent.createVerifiableCredential({
+      proofFormat: 'jwt',
+      save: true,
+      credential: {
+        credentialSubject: {
+          bankIdToken: BANKID_TEST_TOKEN2,
+          id: identity.did,
+        },
+        issuer: {
+          id: identity.did,
+        },
+      },
+    });
+    // try {
+    //   await agent.handleMessage({
+    //     raw: vc.proof.jwt,
+    //   });
+    // } catch (error) {
+    //   console.log('VC JWT not valid => ', error);
+    //   throw error;
+    // }
+    const verfifier = configService.get<string>('ISSUER_DID');
+    const vp = await agent.createVerifiablePresentation({
+      presentation: {
+        holder: identity.did,
+        verifier: [verfifier],
+        verifiableCredential: [vc],
+      },
+      proofFormat: 'jwt',
+    });
+    try {
+      await agent.handleMessage({
+        raw: vp.proof.jwt,
+      });
+    } catch (error) {
+      console.log('VS JWT not valid => ', error);
+      throw error;
+    }
 
     const tokens = await controller.verify({
-      jws: jws,
+      vp,
+      skipBankidVerify: true,
+      skipBlockchain: true,
     });
-    await Promise.all(
-      tokens.map(async (token) => {
-        const verified = await did.verifyJWS(token);
-
-        if (verified.payload.identifier) {
-          expect(verified.payload.identifier).toBe('14102123973');
-        }
-        if (verified.payload.name) {
-          expect(verified.payload.name).toBe('Lo, Morten');
-        }
-        if (verified.payload.blockchainAccounts) {
-          expect(verified.payload.blockchainAccounts).toContain(wallet.address);
-        }
-      }),
-    );
+    tokens.forEach((token) => {
+      if ('name' in token.credentialSubject) {
+        expect(token.credentialSubject.name).toBe('Lo, Morten');
+      }
+    });
   });
 });
