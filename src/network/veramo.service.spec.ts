@@ -59,7 +59,10 @@ describe('Veramo tests', () => {
     const verifier = await service.createIdentity();
     const nameVC = await service.issueCredential(nameClaim, subject);
     const ageVC = await service.issueCredential(ageClaim, subject);
-    const vs = await service.createVerfiablePresentation(verifier.did, [nameVC, ageVC]);
-    console.log('vs => ', vs);
+    const vp = await service.createVerfiablePresentation(verifier.did, [nameVC, ageVC]);
+
+    console.log('vp => ', vp);
+    const validVP = await service.verifyVP(vp.proof.jwt);
+    expect(validVP).toBe(true);
   });
 });

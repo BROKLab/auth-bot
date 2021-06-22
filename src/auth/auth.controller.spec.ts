@@ -62,7 +62,7 @@ describe('AuthController', () => {
     //   throw error;
     // }
     const verfifier = configService.get<string>('ISSUER_DID');
-    const vs = await agent.createVerifiablePresentation({
+    const vp = await agent.createVerifiablePresentation({
       presentation: {
         holder: identity.did,
         verifier: [verfifier],
@@ -72,46 +72,22 @@ describe('AuthController', () => {
     });
     try {
       await agent.handleMessage({
-        raw: vs.proof.jwt,
+        raw: vp.proof.jwt,
       });
     } catch (error) {
       console.log('VS JWT not valid => ', error);
       throw error;
     }
 
-    // const tokens = await controller.verify({
-    //   verifiablePresentation: vs,
-    // });
-
-    // const token = BANKID_TEST_TOKEN2;
-    // const tokenHash = ethers.utils.id(token);
-    // const tokenHashBytes = ethers.utils.arrayify(tokenHash);
-    // const signature = await wallet.signMessage(tokenHashBytes);
-
-    // const jws = await did.createJWS({
-    //   bankIdToken: token,
-    //   signedBankIdToken: signature,
-    //   skipBlockchain: true,
-    //   skipBankidVerify: true,
-    // });
-
-    // const tokens = await controller.verify({
-    //   jws: jws,
-    // });
-    // await Promise.all(
-    //   tokens.map(async (token) => {
-    //     const verified = await did.verifyJWS(token);
-
-    //     if (verified.payload.identifier) {
-    //       expect(verified.payload.identifier).toBe('14102123973');
-    //     }
-    //     if (verified.payload.name) {
-    //       expect(verified.payload.name).toBe('Lo, Morten');
-    //     }
-    //     if (verified.payload.blockchainAccounts) {
-    //       expect(verified.payload.blockchainAccounts).toContain(wallet.address);
-    //     }
-    //   }),
-    // );
+    const tokens = await controller.verify({
+      vp,
+      skipBankidVerify: true,
+      skipBlockchain: true,
+    });
+    tokens.forEach((token) => {
+      if ('name' in token.credentialSubject) {
+        expect(token.credentialSubject.name).toBe('Lo, Morten');
+      }
+    });
   });
 });

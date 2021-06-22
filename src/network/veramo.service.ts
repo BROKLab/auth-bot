@@ -108,6 +108,18 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async verifyVP(jwt: string) {
+    try {
+      await this.agent.handleMessage({
+        raw: jwt,
+      });
+      return true;
+    } catch (error) {
+      console.log('VP not valid => ', error);
+      return false;
+    }
+  }
+
   async createVerfiablePresentation(verifier: string, verifiableCredentials: VerifiableCredential[]) {
     const vs = await this.agent.createVerifiablePresentation({
       presentation: {
