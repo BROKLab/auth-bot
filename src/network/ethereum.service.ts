@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ethers } from 'ethers';
-import { AuthProvider__factory } from './contracts/factories/AuthProvider__factory';
+import { AuthProvider__factory, Deployments } from '@brok/captable-contracts';
 
 @Injectable()
 export class EthereumService {
@@ -27,6 +27,10 @@ export class EthereumService {
     }
   }
   authProviderContract() {
-    return new AuthProvider__factory(this.signer()).attach(this.configService.get('AUTH_PROVIDER_ADDRESS'));
+    const BROK_ENVIROMENT = this.configService.get('BROK_ENVIROMENT');
+    if (!BROK_ENVIROMENT) throw Error('Please set BROK_ENVIROMENT');
+    console.log(BROK_ENVIROMENT);
+
+    return new AuthProvider__factory(this.signer()).attach(Deployments[BROK_ENVIROMENT].contracts.AuthProvider.address);
   }
 }
