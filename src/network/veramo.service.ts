@@ -79,11 +79,12 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
     return issuer;
   }
 
-  async issueCredential(data: Record<string, any>, subjectDidId: string) {
+  async issueCredential(data: Record<string, any>, subjectDidId: string, type: string[]) {
     const vc = await this.agent.createVerifiableCredential({
       proofFormat: 'jwt',
       save: true,
       credential: {
+        type: ['VerifiableCredential', ...type],
         credentialSubject: {
           ...data,
           id: subjectDidId,

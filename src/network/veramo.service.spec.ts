@@ -33,7 +33,7 @@ describe('Veramo tests', () => {
   });
   it('should create VC and verify VC against issuer', async () => {
     const subject = 'did:ethr:brok:0x03719c5f561b5342216fd3b204d890cf157f192f7bf40ed3f9301c5ca05690726d';
-    const vc = await service.issueCredential(nameClaim, subject);
+    const vc = await service.issueCredential(nameClaim, subject, ['PersonCredential']);
     console.log('vc => ,', vc);
     console.log('jwt => ,', vc.proof.jwt);
 
@@ -47,7 +47,7 @@ describe('Veramo tests', () => {
 
   it('should find credentials for did', async () => {
     const subject = 'did:ethr:brok:0x0260cc4eb9ce0614f920d3f47cfe4a5b177d64a00e04c50fdf392b1ada891aa675';
-    await service.issueCredential(nameClaim, subject);
+    await service.issueCredential(nameClaim, subject, ['PersonCredential']);
     const vcs = await service.findCredentials(subject);
 
     const vcWithName = vcs.find((vc) => 'name' in vc.verifiableCredential.credentialSubject);
@@ -57,8 +57,8 @@ describe('Veramo tests', () => {
   it('should create verfiable presentation', async () => {
     const subject = 'did:ethr:brok:0x0260cc4eb9ce0614f920d3f47cfe4a5b177d64a00e04c50fdf392b1ada891aa675';
     const verifier = await service.createIdentity();
-    const nameVC = await service.issueCredential(nameClaim, subject);
-    const ageVC = await service.issueCredential(ageClaim, subject);
+    const nameVC = await service.issueCredential(nameClaim, subject, ['PersonCredential']);
+    const ageVC = await service.issueCredential(ageClaim, subject, ['PersonCredential']);
     const vp = await service.createVerfiablePresentation(verifier.did, [nameVC, ageVC]);
 
     console.log('vp => ', vp);

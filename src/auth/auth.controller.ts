@@ -25,7 +25,6 @@ export class AuthController {
     },
   ) {
     try {
-      console.log('vp => ', body.vp);
       const validVP = await this.veramoService.verifyVP(body.vp.proof.jwt);
       if (!validVP) {
         throw Error('VerifiablePresentation not valid');
@@ -63,7 +62,6 @@ export class AuthController {
 
       const publicKey = vcWithBankIDToken.credentialSubject.id.split(':').pop();
       const address = ethers.utils.computeAddress(publicKey);
-      console.log('addres', address);
 
       // // Save auth to blockchain
       let txHash = null;
@@ -109,6 +107,7 @@ export class AuthController {
           birthDate: birthdateISO8601,
         },
         vcWithBankIDToken.credentialSubject.id,
+        ['PersonCredential'],
       );
       const vc2 = await this.veramoService.issueCredential(
         {
@@ -116,6 +115,7 @@ export class AuthController {
           blockchainAccounts: [address],
         },
         vcWithBankIDToken.credentialSubject.id,
+        ['PersonCredential'],
       );
       return [vc1, vc2];
     } catch (error) {

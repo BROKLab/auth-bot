@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthModuleMeta } from './auth.module';
 import { BANKID_TEST_TOKEN2 } from './test.data';
 import { getDbConnection, initAgent } from '../network/veramo.utils';
+import { writeFileSync } from 'fs';
 
 // Because we are doing a blockchain tx we need to increase the async test timeout
 jest.setTimeout(20000);
@@ -53,14 +54,6 @@ describe('AuthController', () => {
         },
       },
     });
-    // try {
-    //   await agent.handleMessage({
-    //     raw: vc.proof.jwt,
-    //   });
-    // } catch (error) {
-    //   console.log('VC JWT not valid => ', error);
-    //   throw error;
-    // }
     const verfifier = configService.get<string>('ISSUER_DID');
     const vp = await agent.createVerifiablePresentation({
       presentation: {
@@ -70,23 +63,21 @@ describe('AuthController', () => {
       },
       proofFormat: 'jwt',
     });
-    try {
-      await agent.handleMessage({
-        raw: vp.proof.jwt,
-      });
-    } catch (error) {
-      console.log('VS JWT not valid => ', error);
-      throw error;
-    }
-
+    writeFileSync('vp.json', JSON.stringify(vp));
     const tokens = await controller.verify({
       vp,
       skipBankidVerify: true,
       skipBlockchain: true,
     });
+    writeFileSync('vc.json', JSON.stringify(tokens));
     tokens.forEach((token) => {
       if ('name' in token.credentialSubject) {
         expect(token.credentialSubject.name).toBe('Lo, Morten');
+        console.log('JWT with name => ', token.proof.jwt);
+      }
+      if ('identifier' in token.credentialSubject) {
+        expect(token.credentialSubject.identifier).toBe('14102123973');
+        console.log('JWT with idnetifier => ', token.proof.jwt);
       }
     });
   });

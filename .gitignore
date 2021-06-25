@@ -34,3 +34,6 @@ lerna-debug.log*
 !.vscode/extensions.json
 veramo.db.sqlite
 wallet.db.sqlite
+test.json
+vp.json
+vc.json
