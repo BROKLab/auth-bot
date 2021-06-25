@@ -143,38 +143,38 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
       await this.verifyJWT(jwt);
       const payload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString()) as JwtPayload;
       const errors = [];
-      try {
-        const isVP = 'vp' in payload && payload.vp.type.includes('VerifiablePresentation');
-        if (verifyOptions.requireVerifiablePresentation && !isVP) {
-          throw Error('JWT is not a VerifiablePresentation, expected a JWT with vp property and VerifiablePresentation in vp.types ');
-        }
-        if (verifyOptions.decodeCredentials) {
-          if (!Array.isArray(payload.vp.verifiableCredential)) errors.push(`JWT vp.verifiableCredential was ${typeof payload.vp.verifiableCredential}, expected Array`);
-          const decodedVerifiableCredentials = await Promise.all(
-            payload.vp.verifiableCredential.map(async (subJWT) => {
-              try {
-                // Decode sub credential with overridden options,
-                // REVIEW Is it correct to make sure VP issuer is subject of VC?
-                const decoded = await this.decodeJWT(subJWT, {
-                  ...verifyOptions,
-                  decodeCredentials: false,
-                  audience: undefined,
-                  subject: payload.vp.iss,
-                  requireVerifiablePresentation: false,
-                });
-                return decoded;
-              } catch (error) {
-                errors.push(`Error decoding subcredential: ${error.message}. \nSubcredential was: \n${Buffer.from(subJWT.split('.')[1], 'base64').toString()}`);
-              }
-            }),
-          );
-          payload.vp.jwts = decodedVerifiableCredentials;
-        }
-      } catch (error) {
-        errors.push(`JWT was a Verifiable Presentation, error while decoding subcredential: ${error.message}`);
-      }
-
       if (verifyOptions) {
+        try {
+          const isVP = 'vp' in payload && payload.vp.type.includes('VerifiablePresentation');
+          if (verifyOptions.requireVerifiablePresentation && !isVP) {
+            throw Error('JWT is not a VerifiablePresentation, expected a JWT with vp property and VerifiablePresentation in vp.types ');
+          }
+          if (verifyOptions.decodeCredentials) {
+            if (!Array.isArray(payload.vp.verifiableCredential)) errors.push(`JWT vp.verifiableCredential was ${typeof payload.vp.verifiableCredential}, expected Array`);
+            const decodedVerifiableCredentials = await Promise.all(
+              payload.vp.verifiableCredential.map(async (subJWT) => {
+                try {
+                  // Decode sub credential with overridden options,
+                  // REVIEW Is it correct to make sure VP issuer is subject of VC?
+                  const decoded = await this.decodeJWT(subJWT, {
+                    ...verifyOptions,
+                    decodeCredentials: false,
+                    audience: undefined,
+                    subject: payload.vp.iss,
+                    requireVerifiablePresentation: false,
+                  });
+                  return decoded;
+                } catch (error) {
+                  errors.push(`Error decoding subcredential: ${error.message}. \nSubcredential was: \n${Buffer.from(subJWT.split('.')[1], 'base64').toString()}`);
+                }
+              }),
+            );
+            payload.vp.jwts = decodedVerifiableCredentials;
+          }
+        } catch (error) {
+          errors.push(`JWT traited as Verifiable Presentation, error while decoding subcredential: ${error.message}`);
+        }
+
         if (verifyOptions.audience) {
           if (typeof payload.aud === 'string') {
             if (payload.aud !== verifyOptions.audience) errors.push(`JWT audience was ${payload.aud}, expected ${verifyOptions.audience}`);

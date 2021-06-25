@@ -34,9 +34,6 @@ describe('Veramo tests', () => {
   it('should create VC and verify VC against issuer', async () => {
     const subject = 'did:ethr:brok:0x03719c5f561b5342216fd3b204d890cf157f192f7bf40ed3f9301c5ca05690726d';
     const vc = await service.issueCredential(nameClaim, subject, ['PersonCredential']);
-    console.log('vc => ,', vc);
-    console.log('jwt => ,', vc.proof.jwt);
-
     const issuer = await service.getIssuer();
     const validVC = await service.verifyJWT(vc.proof.jwt);
 
