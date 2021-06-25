@@ -1,6 +1,5 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import { ethers } from 'ethers';
 import { AuthController } from './auth.controller';
 import { AuthModuleMeta } from './auth.module';
 import { BANKID_TEST_TOKEN2 } from './test.data';
@@ -37,10 +36,9 @@ describe('AuthController', () => {
 
   it('should get VCs of idnetifier, name and blockchainAccount ', async () => {
     const dbConnection = getDbConnection('wallet.db.sqlite');
-    const agent = initAgent(dbConnection, {
-      secretKey: '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c',
-    });
+    const agent = initAgent(dbConnection);
     const identity = await agent.didManagerCreate();
+
     const vc = await agent.createVerifiableCredential({
       proofFormat: 'jwt',
       save: true,
@@ -59,25 +57,25 @@ describe('AuthController', () => {
       presentation: {
         holder: identity.did,
         verifier: [verfifier],
-        verifiableCredential: [vc],
+        verifiableCredential: [vc.proof.jwt],
       },
       proofFormat: 'jwt',
     });
     writeFileSync('vp.json', JSON.stringify(vp));
-    const tokens = await controller.verify({
-      vp,
+    const jwts = await controller.verify({
+      jwt: vp.proof.jwt,
       skipBankidVerify: true,
       skipBlockchain: true,
     });
-    writeFileSync('vc.json', JSON.stringify(tokens));
-    tokens.forEach((token) => {
-      if ('name' in token.credentialSubject) {
-        expect(token.credentialSubject.name).toBe('Lo, Morten');
-        console.log('JWT with name => ', token.proof.jwt);
+    jwts.forEach((jwt) => {
+      const decodedPayload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
+      if ('name' in decodedPayload.vc.credentialSubject) {
+        expect(decodedPayload.vc.credentialSubject.name).toBe('Lo, Morten');
+        console.log('JWT with name => ', jwt);
       }
-      if ('identifier' in token.credentialSubject) {
-        expect(token.credentialSubject.identifier).toBe('14102123973');
-        console.log('JWT with idnetifier => ', token.proof.jwt);
+      if ('identifier' in decodedPayload.vc.credentialSubject) {
+        expect(decodedPayload.vc.credentialSubject.identifier).toBe('14102123973');
+        console.log('JWT with identifier => ', jwt);
       }
     });
   });

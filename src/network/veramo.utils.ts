@@ -85,7 +85,7 @@ export function initAgent(
   _args: {
     defaultDidProvider?: string;
     secretKey?: string;
-  },
+  } = {},
 ): TAgent<IDIDManager & IKeyManager & IDataStore & IDataStoreORM & IResolver & ICredentialIssuer> {
   const args = { defaultDidProvider: 'did:ethr:brok', ..._args };
   const agentConfig = getAgentConfig(dbConnection, args.defaultDidProvider, args.secretKey);

@@ -19,48 +19,38 @@ export class AuthController {
   async verify(
     @Body()
     body: {
-      vp: VerifiablePresentation;
+      jwt: string;
       skipBlockchain?: boolean;
       skipBankidVerify?: boolean;
     },
   ) {
     try {
-      const validVP = await this.veramoService.verifyVP(body.vp.proof.jwt);
-      if (!validVP) {
-        throw Error('VerifiablePresentation not valid');
-      }
-
+      // TODO Take out all JWT functioanlity as route guards and make the pluggable
       const ourVerifier = this.configService.get<string>('ISSUER_DID');
+      const decoded = await this.veramoService.decodeJWT(body.jwt, { decodeCredentials: true, audience: ourVerifier, requireVerifiablePresentation: true });
 
-      if (!body.vp.verifier.includes(ourVerifier)) {
-        throw Error('VerifiablePresentation not designated for our verfier');
-      }
-      const vcWithBankIDToken = body.vp.verifiableCredential.find((vc) => {
-        if (vc.credentialSubject.bankIdToken) {
+      const jwtWithBankIDToken = decoded.vp.jwts.find((jwt) => {
+        if (jwt.vc.credentialSubject.bankIdToken) {
           return true;
         }
         return false;
       });
-      if (!vcWithBankIDToken) {
+      if (!jwtWithBankIDToken) {
         throw Error('No VC with bankIdToken property');
-      }
-      const validVC = this.veramoService.verifyVC(vcWithBankIDToken.proof.jwt);
-      if (!validVC) {
-        throw Error('VerifiableCredential not valid');
       }
 
       // Verfies token with cert from Criipto. Will throw if not verfiable agains cert form .env.
-      const bankidData = decode(vcWithBankIDToken.credentialSubject.bankIdToken) as BankidData;
+      const bankidData = decode(jwtWithBankIDToken.vc.credentialSubject.bankIdToken) as BankidData;
       const cert = this.configService.get<string>('CRIIPTO_CERT');
       const skipTokenVerify = body.skipBankidVerify && this.configService.get('NODE_ENV') !== 'production';
       if (skipTokenVerify) {
         // TODO : Should put som alert logging on this so this does not accidenalty happen.
         console.debug('Skipping bankId Verification because we are not in production');
       } else {
-        verify(vcWithBankIDToken.credentialSubject.bankIdToken, cert);
+        verify(jwtWithBankIDToken.vc.credentialSubject.bankIdToken, cert);
       }
 
-      const publicKey = vcWithBankIDToken.credentialSubject.id.split(':').pop();
+      const publicKey = jwtWithBankIDToken.sub.split(':').pop();
       const address = ethers.utils.computeAddress(publicKey);
 
       // // Save auth to blockchain
@@ -106,7 +96,7 @@ export class AuthController {
           givenName: bankidData.given_name,
           birthDate: birthdateISO8601,
         },
-        vcWithBankIDToken.credentialSubject.id,
+        jwtWithBankIDToken.vc.credentialSubject.id,
         ['PersonCredential'],
       );
       const vc2 = await this.veramoService.issueCredential(
@@ -114,10 +104,10 @@ export class AuthController {
           identifier: bankidData.socialno,
           blockchainAccounts: [address],
         },
-        vcWithBankIDToken.credentialSubject.id,
+        jwtWithBankIDToken.vc.credentialSubject.id,
         ['PersonCredential'],
       );
-      return [vc1, vc2];
+      return [vc1.proof.jwt, vc2.proof.jwt];
     } catch (error) {
       console.log(error);
       throw new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
