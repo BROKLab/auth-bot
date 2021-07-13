@@ -169,7 +169,7 @@ export class VeramoService implements OnModuleInit, OnModuleDestroy {
                 }
               }),
             );
-            payload.vp.jwts = decodedVerifiableCredentials;
+            payload.vp.JWTs = decodedVerifiableCredentials;
           }
         } catch (error) {
           errors.push(`JWT traited as Verifiable Presentation, error while decoding subcredential: ${error.message}`);

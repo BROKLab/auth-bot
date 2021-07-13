@@ -68,6 +68,7 @@ describe('AuthController', () => {
         },
       },
     });
+
     const verfifier = configService.get<string>('ISSUER_DID');
     const vp = await agent.createVerifiablePresentation({
       presentation: {
@@ -77,12 +78,13 @@ describe('AuthController', () => {
       },
       proofFormat: 'jwt',
     });
-    writeFileSync('vp.json', JSON.stringify(vp));
+    writeFileSync('vp.json', JSON.stringify(vp.proof.jwt));
     const jwts = await controller.verify({
       jwt: vp.proof.jwt,
       skipBankidVerify: true,
       skipBlockchain: true,
     });
+    writeFileSync('jwts.json', JSON.stringify(jwts));
     jwts.forEach((jwt) => {
       const decodedPayload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
       if ('name' in decodedPayload.vc.credentialSubject) {
@@ -93,9 +95,9 @@ describe('AuthController', () => {
         expect(decodedPayload.vc.credentialSubject.identifier).toBe('14102123973');
         console.log('JWT with identifier => ', jwt);
       }
-      if ('blockchainAccounts' in decodedPayload.vc.credentialSubject) {
-        expect(decodedPayload.vc.credentialSubject.blockchainAccounts[0]).toBe('0x89328028668439Fc9478a832D1E091823fB13280');
-        console.log('JWT with blockchainAccounts => ', jwt);
+      if ('blockchainAccount' in decodedPayload.vc.credentialSubject) {
+        expect(decodedPayload.vc.credentialSubject.blockchainAccount).toBe('0x89328028668439Fc9478a832D1E091823fB13280');
+        console.log('JWT with blockchainAccount => ', jwt);
       }
     });
   });
@@ -133,6 +135,8 @@ describe('AuthController', () => {
       skipBankidVerify: true,
       skipBlockchain: true,
     });
+    writeFileSync('jwts.json', JSON.stringify(jwts));
+
     jwts.forEach((jwt) => {
       const decodedPayload = JSON.parse(Buffer.from(jwt.split('.')[1], 'base64').toString());
       if ('name' in decodedPayload.vc.credentialSubject) {

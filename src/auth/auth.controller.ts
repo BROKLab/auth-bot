@@ -29,7 +29,7 @@ export class AuthController {
       const ourVerifier = this.configService.get<string>('ISSUER_DID');
       const decoded = await this.veramoService.decodeJWT(body.jwt, { decodeCredentials: true, audience: ourVerifier, requireVerifiablePresentation: true });
 
-      const jwtWithBankIDToken = decoded.vp.jwts.find((jwt) => {
+      const jwtWithBankIDToken = decoded.vp.JWTs.find((jwt) => {
         if (jwt.vc.credentialSubject.bankIdToken) {
           return true;
         }
@@ -88,6 +88,7 @@ export class AuthController {
       } catch (error) {
         console.log(error.message);
       }
+      console.log(jwtWithBankIDToken);
 
       const vc1 = await this.veramoService.issueCredential(
         {
@@ -96,15 +97,15 @@ export class AuthController {
           givenName: bankidData.given_name,
           birthDate: birthdateISO8601,
         },
-        jwtWithBankIDToken.vc.credentialSubject.id,
+        jwtWithBankIDToken.sub,
         ['PersonCredential'],
       );
       const vc2 = await this.veramoService.issueCredential(
         {
           identifier: bankidData.socialno,
-          blockchainAccounts: [address],
+          blockchainAccount: address,
         },
-        jwtWithBankIDToken.vc.credentialSubject.id,
+        jwtWithBankIDToken.sub,
         ['PersonCredential'],
       );
       return [vc1.proof.jwt, vc2.proof.jwt];
