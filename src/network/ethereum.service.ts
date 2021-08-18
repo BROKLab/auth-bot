@@ -12,19 +12,9 @@ export class EthereumService {
   }
 
   provider() {
-    const PROVIDER_USER = this.configService.get('PROVIDER_USER');
-    const PROVIDER_PASSWORD = this.configService.get('PROVIDER_PASSWORD');
-    if (PROVIDER_USER && PROVIDER_PASSWORD) {
-      return new ethers.providers.JsonRpcProvider({
-        url: this.configService.get('PROVIDER_URL'),
-        user: PROVIDER_USER,
-        password: PROVIDER_PASSWORD,
-      });
-    } else {
-      return new ethers.providers.JsonRpcProvider({
-        url: this.configService.get('PROVIDER_URL'),
-      });
-    }
+    return new ethers.providers.JsonRpcProvider({
+      url: this.configService.get('PROVIDER_URL'),
+    });
   }
   authProviderContract() {
     const BROK_ENVIROMENT = this.configService.get('BROK_ENVIROMENT');
